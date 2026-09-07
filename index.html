@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="12 Week Focus">
+  <title>12 Week Focus</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">12</div><div><strong>12 Week</strong><span>FOCUS</span></div></div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active">⌂ <span>Обзор</span></button>
+      <button data-view="week">✓ <span>Эта неделя</span></button>
+      <button data-view="plan">▦ <span>План 12 недель</span></button>
+      <button data-view="goals">◎ <span>Цели</span></button>
+      <button data-view="review">↻ <span>Разбор</span></button>
+      <button data-view="settings">⚙ <span>Настройки</span></button>
+    </nav>
+    <div class="sidebar-foot">Данные хранятся только в этом браузере.</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="menuBtn">☰</button>
+      <div class="crumb" id="pageTitle">Обзор</div>
+      <div class="top-actions">
+        <button class="icon-btn" id="themeBtn" title="Тема">☼</button>
+        <button class="primary small" id="quickAdd">+ Действие</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="view active"></section>
+    <section id="week" class="view"></section>
+    <section id="plan" class="view"></section>
+    <section id="goals" class="view"></section>
+    <section id="review" class="view"></section>
+    <section id="settings" class="view"></section>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-card" id="modalCard"></div>
+</div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

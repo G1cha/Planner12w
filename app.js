@@ -5,7 +5,7 @@ let currentView="dashboard";
 
 function blank(){
   const now=new Date(); const start=toISODate(now);
-  return {version:1, theme:"light", cycle:{name:"Мой 12-недельный цикл",start,why:"",vision:""},goals:[],weeks:Array.from({length:12},(_,i)=>({number:i+1,actions:[],review:{worked:"",change:"",win:""}})),settings:{weekStartsMonday:true}};
+  return {version:1, theme:"dark", cycle:{name:"Мой 12-недельный цикл",start,why:"",vision:""},goals:[],weeks:Array.from({length:12},(_,i)=>({number:i+1,actions:[],review:{worked:"",change:"",win:""}})),settings:{weekStartsMonday:true}};
 }
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));return x||blank()}catch{return blank()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));render();showToast("Сохранено")}
@@ -13,6 +13,11 @@ function toISODate(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).t
 function dateObj(s){return new Date(s+"T00:00:00")}
 function addDays(s,n){const d=dateObj(s);d.setDate(d.getDate()+n);return toISODate(d)}
 function diffDays(a,b){return Math.floor((dateObj(b)-dateObj(a))/86400000)}
+function selectedWeek(){
+  const raw=sessionStorage.getItem("selectedWeek");
+  const n=Number(raw);
+  return Number.isInteger(n)?Math.max(0,Math.min(11,n)):weekIndex();
+}
 function weekIndex(){
   const diff=diffDays(state.cycle.start,toISODate(new Date()));
   return Math.max(0,Math.min(11,Math.floor(diff/7)));
@@ -36,12 +41,11 @@ function goalProgress(g){
 function currentWeekActions(){return state.weeks[weekIndex()].actions}
 function nav(){
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
-  document.getElementById("themeBtn").onclick=()=>{state.theme=state.theme==="dark"?"light":"dark";applyTheme();save()};
   document.getElementById("quickAdd").onclick=()=>openActionModal();
   document.getElementById("menuBtn").onclick=()=>document.querySelector(".sidebar").classList.toggle("open");
 }
 function setView(v){currentView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));document.getElementById(v).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));document.getElementById("pageTitle").textContent={dashboard:"Обзор",week:"Эта неделя",plan:"План 12 недель",goals:"Цели",review:"Разбор",settings:"Настройки"}[v];render();window.scrollTo(0,0);document.querySelector(".sidebar").classList.remove("open")}
-function applyTheme(){document.body.classList.toggle("dark",state.theme==="dark")}
+function applyTheme(){document.body.classList.add("dark");state.theme="dark"}
 function render(){applyTheme();renderDashboard();renderWeek();renderPlan();renderGoals();renderReview();renderSettings()}
 function renderDashboard(){
  const wi=weekIndex(), score=weekScore(wi), a=currentWeekActions(), done=a.filter(x=>x.done).length;
@@ -69,7 +73,7 @@ function taskHTML(x){
  return `<div class="task ${x.done?"done":""}"><button class="check ${x.done?"done":""}" onclick="toggleAction('${x.id}')">${x.done?"✓":""}</button><div style="flex:1"><div class="task-name">${esc(x.title)}</div><div class="task-sub">${esc(x.day?x.day+" · ":"")}${esc(x.goalName||"")}</div></div><button class="link-btn" onclick="editAction('${x.id}')">⋯</button></div>`;
 }
 function renderWeek(){
- const wi=weekIndex(), w=state.weeks[wi], score=weekScore(wi), dates=DAYS.map((_,d)=>addDays(addDays(state.cycle.start,wi*7),d));
+ const wi=selectedWeek(), w=state.weeks[wi], score=weekScore(wi), dates=DAYS.map((_,d)=>addDays(addDays(state.cycle.start,wi*7),d));
  document.getElementById("week").innerHTML=`
  <div class="hero"><div><div class="eyebrow">WEEK ${wi+1}</div><h1>Эта неделя</h1><div class="muted">${fmt(dates[0])} — ${fmt(dates[6])}</div></div><div class="score-wrap">${score!==null?`<div class="score-ring" style="--p:${score}%"><b>${score}%</b></div>`:`<div class="score-ring" style="--p:0%"><b>—</b></div>`}</div></div>
  <div class="card"><div class="kpi"><div><h3 style="margin-bottom:3px">Weekly Scorecard</h3><div class="muted">Считаем выполнение ключевых действий, а не настроение или результат.</div></div><span class="pill ${score>=85?"good":score>=65?"warn":""}">${score===null?"Нет оценки":score>=85?"Победная неделя":score>=65?"Есть запас для улучшения":"Нужно скорректировать план"}</span></div></div>
@@ -153,9 +157,7 @@ function toggleAction(id){for(const w of state.weeks){const a=w.actions.find(x=>
 function editAction(id){let found;let wi;state.weeks.forEach((w,i)=>{const a=w.actions.find(x=>x.id===id);if(a){found=a;wi=i}});if(!found)return;openModal(`<h2>Действие</h2><div class="form-grid"><div><label class="label">Название</label><input class="input" id="eTitle" value="${esc(found.title)}"></div><div class="form-row"><div><label class="label">Неделя</label><select class="select" id="eWeek">${state.weeks.map((x,i)=>`<option value="${i}" ${i===wi?"selected":""}>Неделя ${i+1}</option>`).join("")}</select></div><div><label class="label">День</label><select class="select" id="eDay">${DAYS.map(x=>`<option ${x===found.day?"selected":""}>${x}</option>`).join("")}</select></div></div></div><div class="modal-actions"><button class="secondary danger-bg" onclick="deleteAction('${id}')">Удалить</button><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="updateAction('${id}',${wi})">Сохранить</button></div>`)}
 function updateAction(id,oldWi){const a=state.weeks[oldWi].actions.find(x=>x.id===id);const nw=+document.getElementById("eWeek").value;a.title=document.getElementById("eTitle").value.trim()||a.title;a.day=document.getElementById("eDay").value;if(nw!==oldWi){state.weeks[oldWi].actions=state.weeks[oldWi].actions.filter(x=>x.id!==id);state.weeks[nw].actions.push(a)}closeModal();save()}
 function deleteAction(id){if(confirm("Удалить действие?")){state.weeks.forEach(w=>w.actions=w.actions.filter(x=>x.id!==id));closeModal();save()}}
-function jumpWeek(i){const start=addDays(state.cycle.start,i*7); // временный переход: показываем выбранную неделю через session
- sessionStorage.setItem("selectedWeek",i);setView("week")}
-function selectedWeek(){const x=sessionStorage.getItem("selectedWeek");return x===null?weekIndex():+x}
+function jumpWeek(i){sessionStorage.setItem("selectedWeek",i);setView("week")}
 function saveReview(){const w=state.weeks[selectedWeek()];w.review.worked=document.getElementById("worked").value.trim();w.review.change=document.getElementById("change").value.trim();w.review.win=document.getElementById("win").value.trim();save();showToast("Разбор сохранён")}
 function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="12-week-focus-backup.json";a.click();URL.revokeObjectURL(a.href)}
 function importData(){const input=document.createElement("input");input.type="file";input.accept=".json";input.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const x=JSON.parse(r.result);if(!x.cycle||!x.weeks)throw 0;Object.assign(state,x);save();showToast("Импортировано")}catch{showToast("Не удалось прочитать файл")}};r.readAsText(f)};input.click()}

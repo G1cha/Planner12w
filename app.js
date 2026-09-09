@@ -5,7 +5,7 @@ let currentView="dashboard";
 
 function blank(){
   const now=new Date(); const start=toISODate(now);
-  return {version:1, theme:"dark", cycle:{name:"Мой 12-недельный цикл",start,why:"",vision:""},goals:[],weeks:Array.from({length:12},(_,i)=>({number:i+1,actions:[],review:{worked:"",change:"",win:""}})),settings:{weekStartsMonday:true}};
+  return {version:1, theme:"dark", cycle:{name:"Мой 12-недельный цикл",start,end:addDays(start,83),why:"",vision:""},history:[],goals:[],weeks:Array.from({length:12},(_,i)=>({number:i+1,actions:[],review:{worked:"",change:"",win:""}})),settings:{weekStartsMonday:true}};
 }
 function load(){try{const x=JSON.parse(localStorage.getItem(KEY));return x||blank()}catch{return blank()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));render();showToast("Сохранено")}
@@ -22,7 +22,11 @@ function weekIndex(){
   const diff=diffDays(state.cycle.start,toISODate(new Date()));
   return Math.max(0,Math.min(11,Math.floor(diff/7)));
 }
-function cycleEnd(){return addDays(state.cycle.start,83)}
+function cycleEnd(){return state.cycle.end||addDays(state.cycle.start,83)}
+function cycleDays(){return diffDays(state.cycle.start,cycleEnd())+1}
+function isValidCycle(){return cycleDays()===84}
+function isLastWeek(){return weekIndex()===11}
+function cycleStatus(){const today=toISODate(new Date());if(today<state.cycle.start)return "upcoming";if(today>cycleEnd())return "ended";return "active"}
 function esc(s=""){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function allActions(){return state.weeks.flatMap(w=>w.actions)}
@@ -44,14 +48,15 @@ function nav(){
   document.getElementById("quickAdd").onclick=()=>openActionModal();
   document.getElementById("menuBtn").onclick=()=>document.querySelector(".sidebar").classList.toggle("open");
 }
-function setView(v){currentView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));document.getElementById(v).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));document.getElementById("pageTitle").textContent={dashboard:"Обзор",week:"Эта неделя",plan:"План 12 недель",goals:"Цели",review:"Разбор",settings:"Настройки"}[v];render();window.scrollTo(0,0);document.querySelector(".sidebar").classList.remove("open")}
+function setView(v){currentView=v;document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));document.getElementById(v).classList.add("active");document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));document.getElementById("pageTitle").textContent={dashboard:"Обзор",week:"Эта неделя",plan:"План 12 недель",cycles:"Циклы",goals:"Цели",review:"Разбор",settings:"Настройки"}[v];render();window.scrollTo(0,0);document.querySelector(".sidebar").classList.remove("open")}
 function applyTheme(){document.body.classList.add("dark");state.theme="dark"}
-function render(){applyTheme();renderDashboard();renderWeek();renderPlan();renderGoals();renderReview();renderSettings()}
+function render(){applyTheme();renderDashboard();renderWeek();renderPlan();renderCycles();renderGoals();renderReview();renderSettings()}
 function renderDashboard(){
  const wi=weekIndex(), score=weekScore(wi), a=currentWeekActions(), done=a.filter(x=>x.done).length;
  const daysLeft=Math.max(0,diffDays(toISODate(new Date()),cycleEnd())+1);
+ const lastWeekBanner=isLastWeek()&&cycleStatus()==="active"?`<div class="cycle-alert"><div><strong>Финишный рывок: последняя неделя</strong><div>После этой недели цикл закончится. Самое время запланировать следующий цикл на 12 недель.</div></div><button class="primary small" onclick="openNewCycleModal()">Создать новый цикл</button></div>`:"";
  document.getElementById("dashboard").innerHTML=`
- <div class="hero"><div><div class="eyebrow">12 WEEK FOCUS</div><h1>${esc(state.cycle.name)}</h1><div class="muted">Неделя ${wi+1} из 12 · ${daysLeft} дн. осталось</div></div><div class="hero-actions"><button class="secondary" onclick="setView('plan')">План цикла</button><button class="primary" onclick="openActionModal()">+ Добавить действие</button></div></div>
+ ${lastWeekBanner}<div class="hero"><div><div class="eyebrow">12 WEEK FOCUS</div><h1>${esc(state.cycle.name)}</h1><div class="muted">Неделя ${wi+1} из 12 · ${daysLeft} дн. осталось</div></div><div class="hero-actions"><button class="secondary" onclick="setView('plan')">План цикла</button><button class="primary" onclick="openActionModal()">+ Добавить действие</button></div></div>
  <div class="grid grid-4">
   <div class="card"><div class="stat">${score===null?"—":score+"%"}</div><div class="stat-label">Исполнение этой недели</div></div>
   <div class="card"><div class="stat">${cycleScore()}%</div><div class="stat-label">Средний score цикла</div></div>
@@ -94,6 +99,19 @@ function renderPlan(){
  <div class="section-title"><h2>Недели</h2><span class="muted">85%+ = хороший ориентир</span></div>
  <div class="card"><table class="table"><thead><tr><th>Неделя</th><th>Период</th><th>Действия</th><th>Score</th><th></th></tr></thead><tbody>${state.weeks.map((w,i)=>`<tr><td><b>W${i+1}</b>${i===wi?' · сейчас':''}</td><td>${fmt(addDays(state.cycle.start,i*7))} — ${fmt(addDays(state.cycle.start,i*7+6))}</td><td>${w.actions.length}</td><td><span class="pill ${weekScore(i)>=85?"good":""}">${weekScore(i)===null?"—":weekScore(i)+"%"}</span></td><td><button class="link-btn" onclick="jumpWeek(${i})">Открыть</button></td></tr>`).join("")}</tbody></table></div>`;
 }
+function cycleSnapshot(){return JSON.parse(JSON.stringify({cycle:state.cycle,goals:state.goals,weeks:state.weeks,archivedAt:toISODate(new Date())}))}
+function snapshotScore(s){const scores=(s.weeks||[]).map((_,i)=>{const a=s.weeks[i]?.actions||[];return a.length?Math.round(a.filter(x=>x.done).length/a.length*100):null}).filter(x=>x!==null);return scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0}
+function renderCycles(){
+ const history=Array.isArray(state.history)?state.history:[];
+ const activeScore=cycleScore();
+ document.getElementById("cycles").innerHTML=`
+ <div class="hero"><div><div class="eyebrow">12 WEEK CYCLES</div><h1>Циклы</h1><div class="muted">Текущий цикл и история завершённых 12-недельных циклов.</div></div><button class="primary" onclick="openNewCycleModal()">+ Новый цикл</button></div>
+ <div class="card cycle-current"><div><div class="cycle-badge">ТЕКУЩИЙ ЦИКЛ</div><h3>${esc(state.cycle.name)}</h3><div class="muted">${fmt(state.cycle.start)} — ${fmt(cycleEnd())}</div></div><div class="cycle-metrics"><div><b>${activeScore}%</b><span>средний score</span></div><div><b>${state.goals.length}</b><span>цели</span></div><div><b>${allActions().length}</b><span>действий</span></div></div></div>
+ <div class="section-title"><h2>История</h2><span class="muted">${history.length} ${history.length===1?"цикл":"цикла"}</span></div>
+ ${history.length?`<div class="cycle-list">${history.map((h,i)=>{const c=h.cycle||{};return `<div class="card cycle-history-card"><div class="cycle-history-head"><div><div class="cycle-badge">ЗАВЕРШЁН</div><h3>${esc(c.name||"12-недельный цикл")}</h3><div class="muted">${fmt(c.start)} — ${fmt(c.end||addDays(c.start,83))}</div></div><button class="link-btn" onclick="deleteHistory(${i})">Удалить</button></div><div class="cycle-metrics"><div><b>${snapshotScore(h)}%</b><span>средний score</span></div><div><b>${(h.goals||[]).length}</b><span>цели</span></div><div><b>${(h.weeks||[]).reduce((n,w)=>n+(w.actions||[]).length,0)}</b><span>действий</span></div></div><div class="muted cycle-note">${esc(c.why||"Без описания цикла")}</div></div>`}).join("")}</div>`:`<div class="card empty">После завершения первого цикла он появится здесь. История сохраняет цели, действия, score и разбор недель.</div>`}`;
+}
+function deleteHistory(i){if(!confirm("Удалить этот цикл из истории?"))return;state.history.splice(i,1);save()}
+
 function renderGoals(){
  document.getElementById("goals").innerHTML=`
  <div class="hero"><div><div class="eyebrow">OUTCOMES</div><h1>Цели 12 недель</h1><div class="muted">Держи 1–3 главных результата. Действия — мост к ним.</div></div><button class="primary" onclick="openGoalModal()">+ Цель</button></div>
@@ -128,15 +146,33 @@ function openModal(html){document.getElementById("modalCard").innerHTML=html;doc
 function closeModal(){document.getElementById("modal").classList.add("hidden")}
 document.addEventListener("click",e=>{if(e.target.classList.contains("modal-backdrop"))closeModal()});
 
-function openCycleModal(){
- openModal(`<h2>Настройка 12-недельного цикла</h2><div class="form-grid">
- <div><label class="label">Название</label><input class="input" id="cname" value="${esc(state.cycle.name)}"></div>
- <div><label class="label">Дата начала</label><input class="input" type="date" id="cstart" value="${state.cycle.start}"></div>
- <div><label class="label">Почему это важно?</label><textarea class="textarea" id="cwhy">${esc(state.cycle.why)}</textarea></div>
- <div><label class="label">Видение</label><textarea class="textarea" id="cvision">${esc(state.cycle.vision)}</textarea></div>
- </div><div class="modal-actions"><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="saveCycle()">Сохранить</button></div>`);
+function openCycleModal(newCycle=false){
+ const start=newCycle?addDays(cycleEnd(),1):state.cycle.start, end=newCycle?addDays(cycleEnd(),84):cycleEnd();
+ openModal(`<h2>${newCycle?"Новый 12-недельный цикл":"Настройка 12-недельного цикла"}</h2><div class="form-grid">
+ <div><label class="label">Название</label><input class="input" id="cname" value="${newCycle?"Новый 12-недельный цикл":esc(state.cycle.name)}"></div>
+ <div class="form-row"><div><label class="label">Начало цикла</label><input class="input" type="date" id="cstart" value="${start}"></div><div><label class="label">Конец цикла</label><input class="input" type="date" id="cend" value="${end}"></div></div>
+ <div class="date-hint">Цикл должен длиться ровно <b>12 недель (84 дня)</b>. После изменения одной даты вторая автоматически подстроится.</div>
+ <div><label class="label">Почему это важно?</label><textarea class="textarea" id="cwhy">${newCycle?"":esc(state.cycle.why)}</textarea></div>
+ <div><label class="label">Видение</label><textarea class="textarea" id="cvision">${newCycle?"":esc(state.cycle.vision)}</textarea></div>
+ </div><div class="modal-actions"><button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="saveCycle(${newCycle})">${newCycle?"Начать цикл":"Сохранить"}</button></div>`);
+ const cs=document.getElementById("cstart"), ce=document.getElementById("cend");
+ cs.onchange=()=>{if(cs.value)ce.value=addDays(cs.value,83)};
+ ce.onchange=()=>{if(ce.value)cs.value=addDays(ce.value,-83)};
 }
-function saveCycle(){state.cycle.name=document.getElementById("cname").value.trim()||"Мой 12-недельный цикл";state.cycle.start=document.getElementById("cstart").value;state.cycle.why=document.getElementById("cwhy").value.trim();state.cycle.vision=document.getElementById("cvision").value.trim();closeModal();save()}
+function saveCycle(newCycle=false){
+ const start=document.getElementById("cstart").value, end=document.getElementById("cend").value;
+ if(!start||!end||diffDays(start,end)!==83)return showToast("Выбери ровно 12 недель (84 дня)");
+ if(newCycle){
+   if(state.cycle&&state.weeks){state.history=Array.isArray(state.history)?state.history:[];state.history.unshift(cycleSnapshot())}
+   state.goals=[];
+   state.weeks=Array.from({length:12},(_,i)=>({number:i+1,actions:[],review:{worked:"",change:"",win:""}}));
+   sessionStorage.removeItem("selectedWeek")
+ }
+ state.cycle.name=document.getElementById("cname").value.trim()||"Мой 12-недельный цикл";
+ state.cycle.start=start;state.cycle.end=end;state.cycle.why=document.getElementById("cwhy").value.trim();state.cycle.vision=document.getElementById("cvision").value.trim();
+ closeModal();save();
+}
+function openNewCycleModal(){openCycleModal(true)}
 function openGoalModal(id=null){
  const g=id?state.goals.find(x=>x.id===id):{title:"",why:""};
  openModal(`<h2>${id?"Редактировать":"Новая"} цель</h2><div class="form-grid"><div><label class="label">Измеримый результат</label><input class="input" id="gtitle" placeholder="Например: получить 5 новых клиентов" value="${esc(g.title)}"></div><div><label class="label">Почему это важно?</label><textarea class="textarea" id="gwhy">${esc(g.why||"")}</textarea></div></div><div class="modal-actions">${id?`<button class="secondary danger-bg" onclick="deleteGoal('${id}')">Удалить</button>`:""}<button class="secondary" onclick="closeModal()">Отмена</button><button class="primary" onclick="saveGoal('${id||""}')">Сохранить</button></div>`);

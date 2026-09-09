@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
-  --bg:#0d0f13;--card:#15181e;--text:#f4f5f7;--muted:#9298a5;--line:#282c34;
-  --accent:#6758f5;--accent2:#5143d9;--soft:#28234e;--green:#39c77b;--green-soft:#163326;
-  --red:#ff6673;--yellow:#e5a72f;--shadow:0 8px 28px rgba(0,0,0,.22);
+  --bg:#06111f;--card:#0b1a2d;--text:#f2f8f5;--muted:#8296aa;--line:#19324a;
+  --accent:#b7ff2a;--accent2:#82d900;--soft:#1b3514;--green:#b7ff2a;--green-soft:#183513;
+  --red:#ff6673;--yellow:#e7bd3f;--shadow:0 10px 32px rgba(0,0,0,.28);
 }
 *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif}
 button,input,textarea,select{font:inherit}button{cursor:pointer;border:0}
@@ -36,3 +36,17 @@ nav{display:grid;gap:5px}nav button{background:transparent;color:#aeb2bd;text-al
 @media(max-width:700px){.cycle-alert{align-items:flex-start;flex-direction:column}.cycle-alert .primary{width:100%}}
 .cycle-current{display:flex;justify-content:space-between;align-items:center;gap:24px}.cycle-badge{font-size:10px;letter-spacing:1.3px;color:var(--accent);font-weight:800;margin-bottom:6px}.cycle-current h3,.cycle-history-card h3{margin:0 0 5px;font-size:18px}.cycle-metrics{display:flex;gap:24px;flex-wrap:wrap}.cycle-metrics>div{display:flex;flex-direction:column;min-width:72px}.cycle-metrics b{font-size:20px}.cycle-metrics span{font-size:10px;color:var(--muted)}.cycle-list{display:grid;gap:12px}.cycle-history-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}.cycle-history-card .cycle-metrics{margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}.cycle-note{margin-top:15px;padding-top:12px;border-top:1px solid var(--line);font-size:12px}.cycle-history-card{transition:.15s}.cycle-history-card:hover{border-color:#3b4050}
 @media(max-width:700px){.cycle-current{align-items:flex-start;flex-direction:column}.cycle-current .cycle-metrics{width:100%;justify-content:space-between}.cycle-history-head{align-items:flex-start}.cycle-history-card .cycle-metrics{justify-content:space-between}.cycle-history-card .cycle-metrics>div{min-width:0}}
+
+
+/* Acid green + deep navy visual system */
+body{background:radial-gradient(circle at 85% -10%,rgba(183,255,42,.07),transparent 28%),var(--bg);}
+.sidebar{background:rgba(6,17,31,.94);border-right-color:#16304a;}
+.card,.modal{box-shadow:var(--shadow);}
+.primary{color:#07120b;box-shadow:0 0 0 1px rgba(183,255,42,.18),0 8px 22px rgba(183,255,42,.12);}
+.primary:hover{box-shadow:0 0 0 1px rgba(183,255,42,.32),0 10px 28px rgba(183,255,42,.18);}
+.progress-fill{background:linear-gradient(90deg,#82d900,#b7ff2a);}
+input:focus,textarea:focus,select:focus{border-color:rgba(183,255,42,.72)!important;box-shadow:0 0 0 3px rgba(183,255,42,.09)!important;}
+.nav-item.active{color:#b7ff2a;background:rgba(183,255,42,.08);}
+.badge.green{color:#b7ff2a;background:rgba(183,255,42,.1);border-color:rgba(183,255,42,.22);}
+.cycle-alert{border-color:rgba(183,255,42,.28);background:linear-gradient(135deg,rgba(183,255,42,.09),rgba(12,39,60,.65));}
+.date-hint{background:rgba(255,255,255,.035);}
